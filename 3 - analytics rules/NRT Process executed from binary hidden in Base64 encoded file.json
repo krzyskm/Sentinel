@@ -1,0 +1,93 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "workspace": {
+            "type": "String"
+        }
+    },
+    "resources": [
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/28c46b07-2bad-441d-acae-35af8c159213')]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/28c46b07-2bad-441d-acae-35af8c159213')]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "NRT",
+            "apiVersion": "2023-12-01-preview",
+            "properties": {
+                "displayName": "NRT Process executed from binary hidden in Base64 encoded file",
+                "description": "Encoding malicious software is a technique used to obfuscate files from detection.\nThe first CommandLine component is looking for Python decoding base64.\nThe second CommandLine component is looking for Bash/sh command line base64 decoding.\nThe third one is looking for Ruby decoding base64.",
+                "severity": "Medium",
+                "enabled": true,
+                "query": "SecurityEvent\n| where EventID==4688\n| where isnotempty(CommandLine)\n| project TimeGenerated, Computer, AccountName = SubjectUserName, AccountNTDomain = SubjectDomainName, FileName = Process, CommandLine, ParentProcessName, SubjectAccount\n| extend HostName = tostring(split(Computer, \".\")[0]), DomainIndex = toint(indexof(Computer, '.'))\n| extend HostNameDomain = iff(DomainIndex != -1, substring(Computer, DomainIndex + 1), Computer)\n| where CommandLine contains \".decode('base64')\"\n        or CommandLine contains \"base64 --decode\"\n        or CommandLine contains \".decode64(\"\n",
+                "suppressionDuration": "PT1H",
+                "suppressionEnabled": false,
+                "tactics": [
+                    "Execution",
+                    "DefenseEvasion"
+                ],
+                "techniques": [
+                    "T1059",
+                    "T1027",
+                    "T1140"
+                ],
+                "subTechniques": [],
+                "alertRuleTemplateName": "7ad4c32b-d0d2-411c-a0e8-b557afa12fce",
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": false,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "PT5H",
+                        "matchingMethod": "AllEntities",
+                        "groupByEntities": [],
+                        "groupByAlertDetails": [],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "SingleAlert"
+                },
+                "alertDetailsOverride": null,
+                "customDetails": null,
+                "entityMappings": [
+                    {
+                        "entityType": "Account",
+                        "fieldMappings": [
+                            {
+                                "identifier": "FullName",
+                                "columnName": "SubjectAccount"
+                            },
+                            {
+                                "identifier": "Name",
+                                "columnName": "AccountName"
+                            },
+                            {
+                                "identifier": "NTDomain",
+                                "columnName": "AccountNTDomain"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "Host",
+                        "fieldMappings": [
+                            {
+                                "identifier": "FullName",
+                                "columnName": "Computer"
+                            },
+                            {
+                                "identifier": "HostName",
+                                "columnName": "HostName"
+                            },
+                            {
+                                "identifier": "DnsDomain",
+                                "columnName": "HostNameDomain"
+                            }
+                        ]
+                    }
+                ],
+                "sentinelEntitiesMappings": null,
+                "templateVersion": "1.0.2"
+            }
+        }
+    ]
+}
